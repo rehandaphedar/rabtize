@@ -89,4 +89,5 @@ Both `start_index` and `end_index` are 0 based. `start_index` is inclusive while
 
 # Results
 
+Generated embeddings can be found in [the rabtize dataset](https://huggingface.co/datasets/rehandaphedar/rabtize) on Hugging Face.
 Aligned translations can be found under `results/`.
