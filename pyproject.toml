@@ -1,0 +1,25 @@
+[project]
+name = "rabtize"
+version = "1.0.0"
+description = "A program to align segmented Qurʾān translation text to Arabic word ranges."
+readme = "README.md"
+requires-python = ">=3.13"
+license = "AGPL-3.0-or-later"
+license-files = ["LICENSE"]
+authors = [
+  { name = "Rehan Daphedar", email = "pyproject.toml@rehandaphedar.com" },
+]
+dependencies = ["numpy", "pyarabic"]
+
+[project.urls]
+Repository = "https://sr.ht/~rehandaphedar/rabtize"
+
+[project.scripts]
+rabtize = "rabtize.main:main"
+
+[project.optional-dependencies]
+embed = ["sentence_transformers"]
+embed-xpu = ["torch", "intel-extension-for-pytorch"]
+
+[tool.setuptools]
+packages = ["rabtize"]
