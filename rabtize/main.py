@@ -1,10 +1,16 @@
 import argparse
 import logging
 import sys
-import json
+import msgspec
 import numpy as np
 
-from rabtize.util import generate_spans, generate_verses
+from rabtize.util import (
+    Words,
+    Translation,
+    TranslationWords,
+    generate_spans,
+    generate_verses,
+)
 
 
 def main():
@@ -98,21 +104,23 @@ def main():
     logging.info("Loading words and translation...")
     global translation
     with open(args.words) as f:
-        words = json.load(f)
+        words = msgspec.json.decode(f.read(), type=Words)
     with open(args.translation) as f:
-        translation = json.load(f)
+        translation = msgspec.json.decode(f.read(), type=Translation)
 
     logging.info("Normalising words and translation...")
     global verses, spans, words_by_verse_key, segments_by_verse_key
     verses = generate_verses(words, translation)
     spans = generate_spans(verses)
-    words_by_verse_key = {k: v["words"] for k, v in verses.items()}
-    segments_by_verse_key = {k: v["segments"] for k, v in verses.items()}
+    words_by_verse_key = {verse_key: verse.words for verse_key, verse in verses.items()}
+    segments_by_verse_key = {
+        verse_key: verse.segments for verse_key, verse in verses.items()
+    }
 
     args.func(args)
 
 
-def embed(args):
+def embed(args: argparse.Namespace):
     from sentence_transformers import SentenceTransformer
 
     logging.info("Loading model...")
@@ -142,8 +150,8 @@ def embed(args):
             texts = [
                 segment
                 for verse in verses.values()
-                if len(verse["segments"]) > 1
-                for segment in verse["segments"]
+                if len(verse.segments) > 1
+                for segment in verse.segments
             ]
 
             logging.info("Generating embeddings...")
@@ -164,7 +172,7 @@ def embed(args):
             )
 
 
-def align(args):
+def align(args: argparse.Namespace):
     logging.info("Loading spans embeddings...")
     spans_cache = np.load(args.spans, allow_pickle=True)
     logging.info("Loading segments embeddings...")
@@ -197,7 +205,7 @@ def align(args):
     logging.info("Arranging spans embeddings by verse...")
     for span_text, embedding in zip(spans.keys(), spans_embeddings):
         for verse_key, i, j in spans[span_text]:
-            verses[verse_key]["spans_embeddings"][(i, j)] = embedding
+            verses[verse_key].spans_embeddings[(i, j)] = embedding
 
     logging.info(
         "Arranging segments embeddings by verse, and spans embeddings into matrices..."
@@ -206,8 +214,8 @@ def align(args):
     for verse_key, verse in verses.items():
         logging.info(f"Processing verse {verse_key}")
 
-        num_words = len(verse["words"])
-        num_segments = len(verse["segments"])
+        num_words = len(verse.words)
+        num_segments = len(verse.segments)
 
         if num_segments == 1:
             alignments = [{"start": 0, "end": num_words}]
@@ -215,31 +223,38 @@ def align(args):
             spans_matrix = np.full(
                 (num_words, num_words, span_embeddings_dimension), np.nan
             )
-            for (i, j), embedding in verse["spans_embeddings"].items():
+            for (i, j), embedding in verse.spans_embeddings.items():
                 spans_matrix[i, j] = embedding
 
             alignments = process_verse(
-                verse["words"],
-                verse["segments"],
+                verse.words,
+                verse.segments,
                 spans_matrix,
                 segments_embeddings[marker : marker + num_segments],
             )
             marker += num_segments
 
         for idx, alignment in enumerate(alignments):
-            translation[verse_key]["segments"][idx]["words"] = alignment
+            translation[verse_key].segments[idx].words = alignment
 
     logging.info("Writing output to file...")
-    with open(args.output, "w") as f:
-        json.dump(translation, f)
+    with open(args.output, "wb") as f:
+        _ = f.write(msgspec.json.encode(translation))
 
 
-def process_verse(words, segments, spans_matrix, segments_embeddings):
+def process_verse(
+    words: list[str],
+    segments: list[str],
+    spans_matrix: np.ndarray,
+    segments_embeddings: np.ndarray,
+):
     num_words = len(words)
     num_segments = len(segments)
 
+    default_segments = [TranslationWords(start=0, end=num_words)]
+
     if num_segments == 1:
-        return [{"start": 0, "end": num_words}]
+        return default_segments
 
     path = {}
     dp = np.full((num_segments + 1, num_words + 1), -np.inf)
@@ -261,13 +276,15 @@ def process_verse(words, segments, spans_matrix, segments_embeddings):
                     path[(segment_number, span_end_number)] = span_start_number
 
     if dp[num_segments, num_words] == -np.inf:
-        return [{"start": 0, "end": num_words}]
+        return default_segments
 
-    alignments = []
+    alignments: list[TranslationWords] = []
     span_end_number = num_words
     for segment_number in range(num_segments, 0, -1):
         span_start_number = path.get((segment_number, span_end_number), 0)
-        alignments.append({"start": span_start_number, "end": span_end_number})
+        alignments.append(
+            TranslationWords(start=span_start_number, end=span_end_number)
+        )
         span_end_number = span_start_number
     alignments.reverse()
 
