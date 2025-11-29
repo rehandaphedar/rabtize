@@ -22,14 +22,14 @@ class Word(msgspec.Struct):
     text: str
 
 
-class TranslationWords(msgspec.Struct):
+class TranslationWordRange(msgspec.Struct):
     start: int
     end: int
 
 
 class TranslationSegment(msgspec.Struct):
     t: str
-    words: TranslationWords
+    word_range: TranslationWordRange | None = None
 
 
 class TranslationVerse(msgspec.Struct):

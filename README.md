@@ -68,14 +68,14 @@ The resulting output will be of the following format (Only the `words` field is 
 		"segments": [
 			{
 				"t": "[segment_text]",
-				"words": {
+				"word_range": {
 					"start": [start_index],
 					"end": [end_index]
 				}
 			},
 			{
 				"t": "[segment_text]",
-				"words": {
+				"word_range": {
 					"start": [start_index],
 					"end": [end_index]
 				}
@@ -85,7 +85,7 @@ The resulting output will be of the following format (Only the `words` field is 
 }
 ```
 
-Both `start_index` and `end_index` are 0 based. `start_index` is inclusive while `end_index` is exclusive.
+Both `start_index` and `end_index` are 1 based and inclusive.
 
 # Results
 

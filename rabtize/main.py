@@ -7,7 +7,7 @@ import numpy as np
 from rabtize.util import (
     Words,
     Translation,
-    TranslationWords,
+    TranslationWordRange,
     generate_spans,
     generate_verses,
 )
@@ -218,7 +218,7 @@ def align(args: argparse.Namespace):
         num_segments = len(verse.segments)
 
         if num_segments == 1:
-            alignments = [{"start": 0, "end": num_words}]
+            alignments = [TranslationWordRange(start=1, end=num_words)]
         else:
             spans_matrix = np.full(
                 (num_words, num_words, span_embeddings_dimension), np.nan
@@ -235,7 +235,7 @@ def align(args: argparse.Namespace):
             marker += num_segments
 
         for idx, alignment in enumerate(alignments):
-            translation[verse_key].segments[idx].words = alignment
+            translation[verse_key].segments[idx].word_range = alignment
 
     logging.info("Writing output to file...")
     with open(args.output, "wb") as f:
@@ -251,7 +251,7 @@ def process_verse(
     num_words = len(words)
     num_segments = len(segments)
 
-    default_segments = [TranslationWords(start=0, end=num_words)]
+    default_segments = [TranslationWordRange(start=1, end=num_words)]
 
     if num_segments == 1:
         return default_segments
@@ -278,12 +278,12 @@ def process_verse(
     if dp[num_segments, num_words] == -np.inf:
         return default_segments
 
-    alignments: list[TranslationWords] = []
+    alignments: list[TranslationWordRange] = []
     span_end_number = num_words
     for segment_number in range(num_segments, 0, -1):
         span_start_number = path.get((segment_number, span_end_number), 0)
         alignments.append(
-            TranslationWords(start=span_start_number, end=span_end_number)
+            TranslationWordRange(start=span_start_number + 1, end=span_end_number)
         )
         span_end_number = span_start_number
     alignments.reverse()
