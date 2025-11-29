@@ -1,3 +1,5 @@
 /pyrightconfig.json
 /rabtize/__pycache__/
 /qpc-hafs-word-by-word.json
+/build/
+/rabtize.egg-info/

@@ -9,7 +9,7 @@ license-files = ["LICENSE"]
 authors = [
   { name = "Rehan Daphedar", email = "pyproject.toml@rehandaphedar.com" },
 ]
-dependencies = ["numpy", "pyarabic"]
+dependencies = ["msgspec", "numpy", "pyarabic"]
 
 [project.urls]
 Repository = "https://sr.ht/~rehandaphedar/rabtize"
